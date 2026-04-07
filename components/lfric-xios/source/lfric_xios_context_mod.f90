@@ -124,6 +124,7 @@ contains
     type(linked_list_item_type), pointer :: loop => null()
     type(lfric_xios_file_type),  pointer :: file => null()
     logical :: zero_start
+    integer(i_def)                       :: end_step
 
     write(log_scratch_space, "(A)") &
         "Initialising XIOS context: " // this%get_context_name()
@@ -134,6 +135,7 @@ contains
     else
       zero_start = .false.
     end if
+    
 
     call xios_context_initialize( this%get_context_name(), &
                                   communicator%get_comm_mpi_val() )
@@ -142,6 +144,11 @@ contains
 
     ! Run XIOS setup routines
     call init_xios_calendar(model_clock, calendar, zero_start, this%context_clock_step)
+
+    ! Get end timestep from clock object
+ 
+    end_step = model_clock%get_last_step()
+
 
     call init_xios_dimensions(chi, panel_id, alt_coords, alt_panel_ids)
     ! Obtain information on whether the mesh is ugrid and planar here?
@@ -152,7 +159,8 @@ contains
       this%ugrid_scaled_projected_coordinates = .true.
     end if
     if (this%filelist%get_length() > 0) call setup_xios_files(this%filelist, &
-                                                              this%ugrid_scaled_projected_coordinates)
+                                                              this%ugrid_scaled_projected_coordinates, &
+                                                              end_step)
 
     if (associated(before_close)) call before_close(model_clock)
 
@@ -180,6 +188,8 @@ contains
     implicit none
 
     type(lfric_xios_context_type), intent(inout) :: this
+    
+    call log_event('In lfric_xios_context finalise() ', LOG_LEVEL_INFO)
 
     call this%finalise_xios_context()
 
@@ -217,20 +227,22 @@ contains
       
       call log_event('After LFRic XIOS Context Mod file write', LOG_LEVEL_INFO)
 
-      ! Finalise the XIOS context - all data will be written to disk and files
-      ! will be closed.
-      !write(log_scratch_space, "(A)") "Finalising XIOS context: " // this%get_context_name()
-      !call log_event(log_scratch_space, log_level_debug)
-      !call xios_context_finalize()
-      !call log_event('After xios_context_finalize', LOG_LEVEL_INFO)
 
       ! Only take action if this is a regional model with UGRID Projected
       ! coordinates, as these are awaiting XIOS feature development
       if ( this%ugrid_scaled_projected_coordinates ) then
-        call log_event("Closing file for post processing.", LOG_LEVEL_DEBUG)
+      
+        ! Finalise the XIOS context - all data will be written to disk and files
+        ! will be closed.
+        write(log_scratch_space, "(A)") "Finalising XIOS context: " // this%get_context_name()
+        call log_event(log_scratch_space, log_level_debug)
+        call xios_context_finalize()
+        call log_event('After xios_context_finalize', LOG_LEVEL_INFO)
+
+        call log_event("Calling post processing.", LOG_LEVEL_DEBUG)
         ! We have closed the context on our end, but we need to make sure that XIOS
         ! has closed the files for all servers before we process them.
-        call init_wait()
+        !call init_wait()
 
         ! Close all files in list
         if (this%filelist%get_length() > 0) then
