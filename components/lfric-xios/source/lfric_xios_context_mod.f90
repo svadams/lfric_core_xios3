@@ -124,7 +124,6 @@ contains
     type(linked_list_item_type), pointer :: loop => null()
     type(lfric_xios_file_type),  pointer :: file => null()
     logical :: zero_start
-    integer(i_def)                       :: end_step
 
     write(log_scratch_space, "(A)") &
         "Initialising XIOS context: " // this%get_context_name()
@@ -145,11 +144,6 @@ contains
     ! Run XIOS setup routines
     call init_xios_calendar(model_clock, calendar, zero_start, this%context_clock_step)
 
-    ! Get end timestep from clock object
- 
-    end_step = model_clock%get_last_step()
-
-
     call init_xios_dimensions(chi, panel_id, alt_coords, alt_panel_ids)
     ! Obtain information on whether the mesh is ugrid and planar here?
     ! This is to inform decisions on file post processing work around code path.
@@ -159,8 +153,7 @@ contains
       this%ugrid_scaled_projected_coordinates = .true.
     end if
     if (this%filelist%get_length() > 0) call setup_xios_files(this%filelist, &
-                                                              this%ugrid_scaled_projected_coordinates, &
-                                                              end_step)
+                                                              this%ugrid_scaled_projected_coordinates)
 
     if (associated(before_close)) call before_close(model_clock)
 
