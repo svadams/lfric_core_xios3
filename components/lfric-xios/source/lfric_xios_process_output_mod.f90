@@ -26,8 +26,7 @@ module lfric_xios_process_output_mod
   use lfric_ncdf_field_group_mod, only: lfric_ncdf_field_group_type
   use lfric_ncdf_file_mod,        only: lfric_ncdf_file_type
   use lfric_xios_constants_mod,   only: dp_xios
-  use log_mod,                    only: log_event, log_level_trace, &
-                                        log_level_info
+  use log_mod,                    only: log_event, log_level_trace
 
   implicit none
 
@@ -55,22 +54,20 @@ subroutine process_output_file(file_path)
   ! Output processing must be done in serial
   if (global_mpi%get_comm_rank() /= 0) return
 
-  call log_event("Processing output file: "//trim(file_path), log_level_info)
-
   ! If file has not been written out, then don't attempt to process it
   inquire(file=trim(file_path), exist=file_exists)
   if (.not. file_exists) return
 
-  ! Open output file
-  file_ncdf = lfric_ncdf_file_type( trim(file_path),           &
+  ! Only apply coordinate post-processing to UGRID files
+  if (file_convention == file_convention_ugrid) then
+    call log_event("Processing output file: "//trim(file_path), log_level_trace)
+      ! Open output file
+      file_ncdf = lfric_ncdf_file_type( trim(file_path),    &
                                     open_mode=FILE_OP_OPEN, &
                                     io_mode=FILE_MODE_WRITE )
-
-  if (file_convention == file_convention_ugrid) then
-    call format_mesh(file_ncdf)
+      call format_mesh(file_ncdf)
+      call file_ncdf%close_file()
   end if
-
-  call file_ncdf%close_file()
 
 end subroutine process_output_file
 

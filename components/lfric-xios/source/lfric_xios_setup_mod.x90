@@ -444,7 +444,8 @@ contains
   !> @brief  Sets up XIOS context file information from list of file objects
   !>
   !> @param[in]  files_list  List of file objects
-  !> @param[in]  logical ugrid_scaled_projected_coordinates
+  !> @param[in]  logical ugrid_scaled_projected_coordinates. Flag to indicate this
+  !>             configuration requires post processing to scale coordinates
   subroutine setup_xios_files(files_list, ugrid_scaled_projected_coordinates)
 
     implicit none
